@@ -31,9 +31,6 @@
         "projectId": "048ace5b-0b81-4661-9d1f-7fbf8ab55464"
       }
     },
-    "owner": "wz1242",
-    "plugins": [
-      "expo-font"
-    ]
+    "owner": "wz1242"
   }
 }
