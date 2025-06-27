@@ -1,0 +1,38 @@
+{
+  "cli": {
+    "version": ">= 16.13.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  },
+  "expo": {
+    "sdkVersion": "53.0.0",
+    "android": {
+      "compileSdkVersion": 33,
+      "targetSdkVersion": 33,
+      "buildToolsVersion": "33.0.0"
+    }
+  },
+  "preview": {
+  "distribution": "internal",
+  "android": {
+    "buildType": "apk",
+    "compileSdkVersion": 33,
+    "targetSdkVersion": 33,
+    "buildToolsVersion": "33.0.0"
+  }
+}
+}

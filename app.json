@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "novel-author-app",
+    "name": "Cloudrain",
     "slug": "novel-author-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,13 +17,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/logo/foreground.png",
+        "backgroundImage": "./assets/logo/background.png"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.wz1242.novelauthorapp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/logo/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "048ace5b-0b81-4661-9d1f-7fbf8ab55464"
+      }
+    },
+    "owner": "wz1242",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
