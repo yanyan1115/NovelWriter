@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 
 export default function LongTextEditScreen({ route, navigation }) {
-  const { initialContent = '', onSave } = route.params || {};
+    const { initialValue: initialContent = '', onSave } = route.params || {};
   // 解决 React Navigation 警告：路由参数含有函数（非可序列化）
   const onSaveRef = useRef(null);
   useEffect(() => {

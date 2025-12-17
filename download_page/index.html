@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0ea5e9">
+    <title>应用下载 · Cloudrain</title>
+    <meta name="description" content="Cloudrain 最新安卓 APK 下载，版本 1.3.1。">
+    <meta property="og:title" content="Cloudrain 安卓 APK 下载">
+    <meta property="og:description" content="Cloudrain 最新安卓 APK 下载，版本 1.3.1。">
+    <meta property="og:image" content="icon.png">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container fade-in">
+        <header class="header">
+            <img src="icon.png" alt="应用图标" class="app-icon" />
+            <div class="title-wrap">
+                <h1 id="app-name" class="app-name">Cloudrain</h1>
+            </div>
+        </header>
+        <main>
+            <section class="info-cards">
+                <div class="info-card">
+                    <span class="label">最新版本</span>
+                    <span class="value" id="version">1.3.1</span>
+                </div>
+                <div class="info-card">
+                    <span class="label">更新日期</span>
+                    <span class="value" id="update-date">2025-12-18</span>
+                </div>
+                <div class="info-card">
+                    <span class="label">文件大小</span>
+                    <span class="value" id="apk-size">计算中...</span>
+                </div>
+            </section>
+
+            <div class="action-row">
+                <a href="apk/Cloudrain.apk" class="btn primary download-button" download>
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 20h14a1 1 0 0 0 1-1v-3h-2v2H6v-2H4v3a1 1 0 0 0 1 1zm7-3 5-5h-3V4h-4v8H7l5 5z" fill="currentColor"/></svg>
+                    <span>下载 APK</span>
+                </a>
+            </div>
+
+            <section class="changelog panel">
+                <h2>更新日志</h2>
+                <pre id="changelog-content">Cloudrain 1.3.1（2025-12-18）
+- 体验优化：启动更快，动画更顺滑
+- 易用性：设置项更清晰，交互更一致
+- 稳定性：弱网下载更可靠，降低后台耗电
+- 修复：修复若干已知问题与偶发崩溃
+- 安全：更新依赖与权限文案</pre>
+            </section>
+        </main>
+        <footer>
+            <p>© 2025 Yanjun_Zhou · 保留所有权利</p>
+        </footer>
+    </div>
+
+    <script>
+    (() => {
+      const link = document.querySelector('.download-button');
+      const sizeEl = document.getElementById('apk-size');
+      if (!link || !sizeEl) return;
+
+      const fileUrl = new URL(link.getAttribute('href'), location.href);
+      // 追加时间戳，尽量绕过缓存
+      fileUrl.searchParams.set('_ts', Date.now().toString());
+
+      const formatBytes = (bytes) => {
+        if (!Number.isFinite(bytes) || bytes <= 0) return null;
+        const units = ['B','KB','MB','GB','TB'];
+        let i = 0; let val = bytes;
+        while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+        const digits = val >= 100 ? 0 : val >= 10 ? 1 : 2;
+        return `${val.toFixed(digits)} ${units[i]}`;
+      };
+
+      const withTimeout = async (input, opts={}) => {
+        const { timeout = 8000, ...rest } = opts;
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+          const res = await fetch(input, { ...rest, signal: controller.signal, credentials: 'same-origin' });
+          return res;
+        } finally { clearTimeout(id); }
+      };
+
+      const tryHead = async () => {
+        const res = await withTimeout(fileUrl.toString(), { method: 'HEAD', cache: 'no-store' });
+        if (!res.ok) throw new Error('HEAD ' + res.status);
+        const len = res.headers.get('content-length');
+        return len ? parseInt(len, 10) : null;
+      };
+
+      const tryRange = async () => {
+        const res = await withTimeout(fileUrl.toString(), { method: 'GET', headers: { 'Range': 'bytes=0-0' }, cache: 'no-store' });
+        if (!(res.ok || res.status === 206 || res.status === 416)) throw new Error('RANGE ' + res.status);
+        // 206: Content-Range: bytes 0-0/12345  或 416: Content-Range: bytes */12345
+        const cr = res.headers.get('content-range');
+        if (cr) {
+          const m = cr.match(/\/(\d+)$/);
+          if (m) return parseInt(m[1], 10);
+        }
+        const len = res.headers.get('content-length');
+        return len ? parseInt(len, 10) : null;
+      };
+
+      (async () => {
+        try {
+          let bytes = await tryHead();
+          if (bytes == null) bytes = await tryRange();
+          const formatted = bytes != null ? formatBytes(bytes) : null;
+          sizeEl.textContent = formatted || '--';
+        } catch (e) {
+          try {
+            // 兜底：若服务器不支持 HEAD/RANGE，尝试普通 GET（不下载到内存，仅取响应头）
+            const res = await withTimeout(fileUrl.toString(), { method: 'GET', cache: 'no-store' });
+            if (res.status === 404) { sizeEl.textContent = '未找到'; return; }
+            const len = res.headers.get('content-length');
+            const formatted = len ? formatBytes(parseInt(len,10)) : null;
+            sizeEl.textContent = formatted || '--';
+          } catch (_) {
+            sizeEl.textContent = '--';
+          }
+        }
+      })();
+    })();
+    </script>
+</body>
+</html>

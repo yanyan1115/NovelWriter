@@ -125,6 +125,33 @@ const getStyles = (theme, fontSize, hasBackgroundImage, bubbleWidth) => StyleShe
     fontWeight: 'bold'
   },
 
+  toastContainer: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  toast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 30, 30, 0.9)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  toastText: {
+    color: 'white',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+
   metadataContainer: { marginTop: 8, paddingLeft: 5 },
   metadataText: {
     fontSize: 10,
@@ -157,6 +184,7 @@ const ChatScreen = ({ navigation }) => {
   const allMessagesRef = useRef(allMessages);
   allMessagesRef.current = allMessages;
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [toastConfig, setToastConfig] = useState({ visible: false, message: '' });
 
   // Theme and Style Management
   const { updateThemeSetting } = useTheme(); // Keep for updating the global context
@@ -771,8 +799,18 @@ const ChatScreen = ({ navigation }) => {
     });
   };
 
+  const showToast = (message) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setToastConfig({ visible: true, message });
+    setTimeout(() => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setToastConfig({ visible: false, message: '' });
+    }, 2000);
+  };
+
   const handleCopyMessage = useCallback(async (text) => {
     await Clipboard.setStringAsync(text);
+    showToast('复制成功');
   }, []);
 
   const deleteMessage = async (messageId) => {
@@ -989,6 +1027,14 @@ const ChatScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+      {toastConfig.visible && (
+        <View style={styles.toastContainer}>
+          <View style={styles.toast}>
+            <Text style={{color: 'white', fontSize: 16}}>✓</Text>
+            <Text style={styles.toastText}>{toastConfig.message}</Text>
+          </View>
+        </View>
+      )}
       {currentSession && (
         <SettingsPanel
           isVisible={isSettingsPanelVisible}

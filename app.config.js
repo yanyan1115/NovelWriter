@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "Cloudrain",
     slug: "novel-author-app",
-    version: "1.0.1",
+    version: "1.3.1",
     orientation: "portrait",
     icon: "./assets/icon.png",
     newArchEnabled: true,

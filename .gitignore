@@ -1,6 +1,6 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
@@ -9,7 +9,7 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native build artifacts
 .kotlin/
 *.orig.*
 *.jks
@@ -17,21 +17,59 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+build/
 
-# Metro
+# Metro bundler
 .metro-health-check*
 
-# debug
+# Logs & debug output
+logs/
+*.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+lerna-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
 
 # macOS
 .DS_Store
+
+# Security
 *.pem
 
-# local env files
+# Environment variables
+# Don't commit .env files, but do commit .env.example
+.env
+.env.*
+!.env.example
 .env*.local
 
-# typescript
+# TypeScript
 *.tsbuildinfo
+
+# Caches
+.npm/
+.eslintcache
+.stylelintcache
+.cache/
+.parcel-cache/
+
+# Other
+*.tgz
+.yarn-integrity
+
+# Application packages
+*.apk
