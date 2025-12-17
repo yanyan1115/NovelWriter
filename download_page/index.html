@@ -65,66 +65,45 @@
       const sizeEl = document.getElementById('apk-size');
       if (!link || !sizeEl) return;
 
-      const fileUrl = new URL(link.getAttribute('href'), location.href);
-      // 追加时间戳，尽量绕过缓存
-      fileUrl.searchParams.set('_ts', Date.now().toString());
+      const downloadUrl = link.getAttribute('href');
+      const apkName = downloadUrl.split('/').pop();
+      const repoMatch = downloadUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+
+      if (!apkName || !repoMatch) {
+        sizeEl.textContent = '--';
+        return;
+      }
+
+      const owner = repoMatch[1];
+      const repo = repoMatch[2];
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
 
       const formatBytes = (bytes) => {
-        if (!Number.isFinite(bytes) || bytes <= 0) return null;
-        const units = ['B','KB','MB','GB','TB'];
-        let i = 0; let val = bytes;
-        while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+        if (!Number.isFinite(bytes) || bytes < 0) return null;
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        const val = bytes / Math.pow(1024, i);
         const digits = val >= 100 ? 0 : val >= 10 ? 1 : 2;
         return `${val.toFixed(digits)} ${units[i]}`;
       };
 
-      const withTimeout = async (input, opts={}) => {
-        const { timeout = 8000, ...rest } = opts;
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
-        try {
-          const res = await fetch(input, { ...rest, signal: controller.signal, credentials: 'same-origin' });
-          return res;
-        } finally { clearTimeout(id); }
-      };
-
-      const tryHead = async () => {
-        const res = await withTimeout(fileUrl.toString(), { method: 'HEAD', cache: 'no-store' });
-        if (!res.ok) throw new Error('HEAD ' + res.status);
-        const len = res.headers.get('content-length');
-        return len ? parseInt(len, 10) : null;
-      };
-
-      const tryRange = async () => {
-        const res = await withTimeout(fileUrl.toString(), { method: 'GET', headers: { 'Range': 'bytes=0-0' }, cache: 'no-store' });
-        if (!(res.ok || res.status === 206 || res.status === 416)) throw new Error('RANGE ' + res.status);
-        // 206: Content-Range: bytes 0-0/12345  或 416: Content-Range: bytes */12345
-        const cr = res.headers.get('content-range');
-        if (cr) {
-          const m = cr.match(/\/(\d+)$/);
-          if (m) return parseInt(m[1], 10);
-        }
-        const len = res.headers.get('content-length');
-        return len ? parseInt(len, 10) : null;
-      };
-
       (async () => {
         try {
-          let bytes = await tryHead();
-          if (bytes == null) bytes = await tryRange();
-          const formatted = bytes != null ? formatBytes(bytes) : null;
-          sizeEl.textContent = formatted || '--';
-        } catch (e) {
-          try {
-            // 兜底：若服务器不支持 HEAD/RANGE，尝试普通 GET（不下载到内存，仅取响应头）
-            const res = await withTimeout(fileUrl.toString(), { method: 'GET', cache: 'no-store' });
-            if (res.status === 404) { sizeEl.textContent = '未找到'; return; }
-            const len = res.headers.get('content-length');
-            const formatted = len ? formatBytes(parseInt(len,10)) : null;
-            sizeEl.textContent = formatted || '--';
-          } catch (_) {
-            sizeEl.textContent = '--';
+          const response = await fetch(apiUrl, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+          
+          const release = await response.json();
+          const asset = release.assets.find(a => a.name === apkName);
+
+          if (asset && typeof asset.size === 'number') {
+            sizeEl.textContent = formatBytes(asset.size) || '--';
+          } else {
+            sizeEl.textContent = '未知';
           }
+        } catch (e) {
+          console.error('Failed to fetch APK size:', e);
+          sizeEl.textContent = '--';
         }
       })();
     })();
