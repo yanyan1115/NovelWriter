@@ -6,6 +6,16 @@
 
 ---
 
+## 📲 下载应用 / Download
+
+您可以通过我们的官方网站下载最新的 APK 安装包。
+
+You can download the latest APK from our official website.
+
+**[➡️ 访问下载页面 / Visit Download Page](https://yanyan1115.github.io/NovelWriter/)**
+
+---
+
 ## ✨ Core Features / 核心功能
 
 ### 📚 Bookshelf & Story Structure Management / 书架与结构管理
