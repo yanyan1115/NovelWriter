@@ -21,7 +21,7 @@ export default function CreateNovelScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('提示', '请输入小说标题', [{ text: '确定' }])
+      Alert.alert('提示', '请输入小说标题~(˶╹ꇴ╹˶)~', [{ text: '确定' }])
       return
     }
     
@@ -80,10 +80,10 @@ export default function CreateNovelScreen({ navigation }) {
         <View style={styles.formContainer}>
           {/* 小说标题输入 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>小说标题 *</Text>
+            <Text style={styles.label}>小说标题</Text>
             <View style={styles.inputWrapper}>
               <TextInput
-                placeholder="请输入小说标题"
+                placeholder="请输入小说标题~(˶╹ꇴ╹˶)~"
                 placeholderTextColor="#a0a0a0"
                 value={title}
                 onChangeText={setTitle}
@@ -150,7 +150,7 @@ export default function CreateNovelScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fffafc',
   },
   scrollView: {
     flex: 1,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fffafc',
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
     shadowColor: '#000',
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   formContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fffafc',
     marginHorizontal: 16,
     borderRadius: 12,
     padding: 20,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputWrapper: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fffafc',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e9ecef',
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fffafc',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     gap: 12,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cancelButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fffafc',
     borderWidth: 1,
     borderColor: '#d0d7de',
   },

@@ -8,7 +8,7 @@ export default function NovelCard({ novel, onPress }) {
       onPress={onPress}
       style={{
         flexDirection: 'row',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#fffafc',
         padding: 12,
         marginBottom: 10,
         borderRadius: 10,

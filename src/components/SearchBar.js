@@ -4,7 +4,7 @@ import { TextInput, View } from 'react-native'
 
 export default function SearchBar({ value, onChange }) {
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: 10 }}>
       <TextInput
         placeholder="搜索书名..."
         value={value}

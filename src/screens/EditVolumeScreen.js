@@ -7,11 +7,11 @@ import {
   TouchableOpacity, 
   Alert, 
   StyleSheet, 
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { loadNovels, saveNovels } from '../storage/storage'
 
 export default function EditVolumeScreen({ route, navigation }) {
@@ -49,7 +49,7 @@ export default function EditVolumeScreen({ route, navigation }) {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('提示', '请输入卷标题')
+      Alert.alert('提示', '请输入卷标题~(˶╹ꇴ╹˶)~')
       return
     }
 
@@ -157,7 +157,7 @@ export default function EditVolumeScreen({ route, navigation }) {
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>卷标题</Text>
             <TextInput
-              placeholder="请输入卷标题"
+              placeholder="请输入卷标题~(˶╹ꇴ╹˶)~"
               value={title}
               onChangeText={setTitle}
               style={styles.textInput}
@@ -184,7 +184,7 @@ export default function EditVolumeScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: '#fffafc'
   },
   loadingContainer: {
     flex: 1,
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fffafc',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5'
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     padding: 16
   },
   novelInfo: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fffafc',
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     color: '#333'
   },
   inputSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fffafc',
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E5',
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#fffafc',
     textAlignVertical: 'top',
     minHeight: 44
   },
