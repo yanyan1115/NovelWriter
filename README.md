@@ -8,9 +8,11 @@
 
 ## 📲 Download / 下载应用
 
-You can download the latest APK from our official website.
+You can download a **ready-to-install APK package** from our official website.
+No project cloning or local build is required — simply download and install it on your Android device.
 
-您可以通过我们的官方网站下载最新的 APK 安装包。
+您可以通过我们的官方网站下载 **可直接安装的 APK 安装包**，
+无需克隆项目、无需本地构建，下载后即可在 Android 设备上安装使用。
 
 **[➡️ Visit Download Page / 访问下载页面](https://yanyan1115.github.io/NovelWriter/)**
 
