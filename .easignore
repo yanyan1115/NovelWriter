@@ -1,0 +1,98 @@
+# EAS Build ignore file
+# 排除不必要的文件，减少构建大小和上传时间
+
+# 构建产物
+android/app/build/
+android/build/
+ios/build/
+*.apk
+*.aab
+*.ipa
+
+# 依赖
+node_modules/
+.expo/
+
+# 开发文件
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+*.swp
+*.swo
+*~
+
+# 测试文件
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# 文档
+README.md
+*.md
+docs/
+
+# 备份文件
+backup.ab
+*.backup
+*.bak
+
+# 临时文件
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+
+# 字体源文件（如果不需要）
+# assets/fonts/*.ttf
+
+# 日志文件
+log.txt
+*.log
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
