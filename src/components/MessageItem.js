@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-
 import {
   View,
   Text,
@@ -27,13 +26,94 @@ const MessageItem = ({
   handleImportChapter,
   handleRegenerateAnswer,
   onSetCollapsible,
+  onUndoDelete,
+  onHardDelete,
+  onTombstoneExpire,
+  pendingUndo,
 }) => {
 
   const isLastVisibleMessage = visibleMessages && visibleMessages.length > 0 && visibleMessages[visibleMessages.length - 1].id === item.id;
 
+  // Tombstone（墓碑行）
+  if (item?.type === 'tombstone') {
+    const expiresAt = typeof item.expiresAt === 'number' ? item.expiresAt : new Date(item.expiresAt).getTime();
+    const [remainingMs, setRemainingMs] = useState(() => Math.max(0, expiresAt - Date.now()));
+
+    useEffect(() => {
+      const timer = setInterval(() => {
+        setRemainingMs(Math.max(0, expiresAt - Date.now()));
+      }, 250);
+      return () => clearInterval(timer);
+    }, [expiresAt]);
+
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+
+    useEffect(() => {
+      if (totalSeconds <= 0) {
+        onTombstoneExpire && onTombstoneExpire(item.undoId);
+      }
+      // 只在到期瞬间触发一次（undoId 不变）
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [totalSeconds, item.undoId]);
+    const mm = String(Math.floor(totalSeconds / 60)).padStart(1, '0');
+    const ss = String(totalSeconds % 60).padStart(2, '0');
+
+    return (
+      <View style={styles.messageWrapper}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 12,
+            backgroundColor: theme.inputBackground,
+            borderWidth: 1,
+            borderColor: theme.inputBorder,
+            opacity: 0.9,
+          }}
+        >
+          <Text style={{ color: theme.disabledText, fontSize: 13 }} numberOfLines={1}>
+            已删除（{mm}:{ss} 内可撤销）
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => onHardDelete && onHardDelete(item.undoId)}
+              style={{ paddingHorizontal: 10, paddingVertical: 6 }}
+            >
+              <Text style={{ color: theme.disabledText, fontWeight: 'bold' }}>
+                彻底删除
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onUndoDelete && onUndoDelete(item.undoId)}
+              disabled={totalSeconds <= 0}
+              style={{ paddingHorizontal: 10, paddingVertical: 6 }}
+            >
+              <Text style={{ color: totalSeconds <= 0 ? theme.disabledText : theme.actionText, fontWeight: 'bold' }}>
+                撤销
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (!item || !item.versions || item.versions.length === 0) {
     return null;
   }
+
+  // 当“当前版本分支”被删除时：隐藏正文，只保留版本切换区域（在 footer）
+  const currentVersionId = item?.versions?.[item.currentVersionIndex]?.id;
+  const isCurrentVersionDeleted = !!(
+    pendingUndo &&
+    pendingUndo.anchorMessageId === item.id &&
+    pendingUndo.anchorVersionId &&
+    pendingUndo.anchorVersionId === currentVersionId &&
+    pendingUndo.mode === 'subtree'
+  );
 
   const isReplying = replyingMessageIds && replyingMessageIds.length > 0;
 
@@ -129,15 +209,7 @@ const MessageItem = ({
 
   const currentVersionIndex = item.currentVersionIndex;
   const currentVersion = item.versions[currentVersionIndex] || { text: '' };
-  const fallbackNonEmpty = (() => {
-    if (!item.versions) return '';
-    for (let i = item.versions.length - 1; i >= 0; i--) {
-      const t = item.versions[i]?.text || '';
-      if (t.length > 0) return t;
-    }
-    return '';
-  })();
-  const displayText = (currentVersion.text || '').length > 0 ? currentVersion.text : fallbackNonEmpty;
+  const displayText = currentVersion.text ?? '';
   const canSwitchPrev = item.currentVersionIndex > 0;
   const canSwitchNext = item.currentVersionIndex < item.versions.length - 1;
 
@@ -149,31 +221,33 @@ const MessageItem = ({
   };
 
   const messageContent = (
-    item.author === 'user' ? (
-      <View style={messageContentStyle}>
-        <Text 
-          style={styles.messageText} 
-          numberOfLines={item.isCollapsed ? 2 : undefined}
-          onTextLayout={handleTextLayout}
-        >
-          {displayText}
-        </Text>
-      </View>
-    ) : (
-      <View onLayout={handleViewLayout} style={messageContentStyle}>
-        {item.isCollapsed ? (
-          <Text style={[styles.messageText, { color: theme.messageTextAssistant }]} numberOfLines={2}>
-            {displayText}
-          </Text>
-        ) : (
-          <MarkdownDisplay
-            key={`${item.id}:${currentVersionIndex}:${(displayText || '').length}`}
-            style={{ ...markdownStyles, body: { ...markdownStyles.body, color: theme.messageTextAssistant } }}
+    isCurrentVersionDeleted ? null : (
+      item.author === 'user' ? (
+        <View style={messageContentStyle}>
+          <Text 
+            style={styles.messageText} 
+            numberOfLines={item.isCollapsed ? 2 : undefined}
+            onTextLayout={handleTextLayout}
           >
             {displayText}
-          </MarkdownDisplay>
-        )}
-      </View>
+          </Text>
+        </View>
+      ) : (
+        <View onLayout={handleViewLayout} style={messageContentStyle}>
+          {item.isCollapsed ? (
+            <Text style={[styles.messageText, { color: theme.messageTextAssistant }]} numberOfLines={2}>
+              {displayText}
+            </Text>
+          ) : (
+            <MarkdownDisplay
+              key={`${item.id}:${currentVersionIndex}:${(displayText || '').length}`}
+              style={{ ...markdownStyles, body: { ...markdownStyles.body, color: theme.messageTextAssistant } }}
+            >
+              {displayText}
+            </MarkdownDisplay>
+          )}
+        </View>
+      )
     )
   );
 
@@ -196,9 +270,11 @@ const MessageItem = ({
               </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleToggleCollapse(item.id)}>
+          {item.isCollapsible && (
+            <TouchableOpacity style={styles.actionButton} onPress={() => handleToggleCollapse(item.id)}>
               <Text style={styles.actionText}>↕️</Text>
             </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.actionButton} onPress={() => handleOpenEditModal(item.id)} disabled={isReplying}>
             <Text style={[styles.actionText, isReplying && styles.disabledText]}>编辑</Text>
           </TouchableOpacity>
@@ -237,9 +313,11 @@ const MessageItem = ({
             <Text style={[styles.switcherText, (!canSwitchNext || isReplying) && styles.disabledText]}>{'>'}</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.actionButton} onPress={() => handleToggleCollapse(item.id)}>
+        {item.isCollapsible && (
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleToggleCollapse(item.id)}>
             <Text style={styles.actionText}>↕️</Text>
           </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.actionButton} onPress={() => handleOpenEditModal(item.id, item.currentVersionIndex)} disabled={isReplying}>
           <Text style={[styles.actionText, isReplying && styles.disabledText]}>编辑</Text>
         </TouchableOpacity>

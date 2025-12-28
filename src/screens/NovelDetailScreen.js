@@ -142,7 +142,7 @@ const VolumeItem = React.memo(({
         {!isCollapsed && (
           <DraggableFlatList
             data={visibleChapters}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => `${vol.id}-${item?.id ?? index}-${index}`}
             scrollEnabled={false}
             removeClippedSubviews={true}
             initialNumToRender={10}
@@ -477,7 +477,7 @@ export default function NovelDetailScreen({ route, navigation }) {
       <View style={styles.container}>
         <DraggableFlatList
           data={Array.isArray(novel?.volumes) ? novel.volumes : []}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => `${item?.id ?? 'vol'}-${index}`}
           initialNumToRender={5}
           windowSize={7}
           maxToRenderPerBatch={5}

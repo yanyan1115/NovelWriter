@@ -37,7 +37,7 @@ export default function ChapterMenu({ novel, currentChapterId, onSelect, onClose
               contentContainerStyle={styles.scrollContent}
             >
               {novel?.volumes?.map((vol, volIndex) => (
-                <View key={vol.id} style={styles.volumeSection}>
+                <View key={vol.id || `${volIndex}`} style={styles.volumeSection}>
                   <View style={[styles.volumeHeader, darkMode && styles.volumeHeaderDark]}>
                     <View style={[styles.volumeIndicator, darkMode && styles.volumeIndicatorDark]} />
                     <Text style={[styles.volumeTitle, darkMode && styles.volumeTitleDark]}>{vol.title}</Text>
@@ -52,7 +52,7 @@ export default function ChapterMenu({ novel, currentChapterId, onSelect, onClose
                     const isCurrentChapter = chap.id === currentChapterId
                     return (
                       <TouchableOpacity
-                        key={chap.id}
+                        key={`${vol.id || volIndex}-${chap.id || chapIndex}`}
                         style={[
                           styles.chapterItem,
                           isCurrentChapter && (darkMode ? styles.chapterItemActiveDark : styles.chapterItemActive)

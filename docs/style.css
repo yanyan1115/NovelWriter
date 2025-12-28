@@ -58,13 +58,29 @@ body {
 }
 .header-left { display: flex; align-items: center; gap: 18px; }
 
+/* 图标占位 & 过渡 */
+.icon-wrap { position: relative; width: 84px; height: 84px; }
+.icon-skeleton {
+  position: absolute; inset: 0;
+  border-radius: 20px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.22) 25%, rgba(148,163,184,0.36) 37%, rgba(148,163,184,0.22) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+  transition: opacity .25s ease;
+}
+.icon-skeleton.hide { opacity: 0; pointer-events: none; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
 .app-icon {
   width: 84px;
   height: 84px;
   border-radius: 20px;
   box-shadow: 0 6px 18px rgba(2,6,23,0.15);
-  transition: transform .25s ease, box-shadow .25s ease;
+  transition: transform .25s ease, box-shadow .25s ease, opacity .25s ease;
+  opacity: 0;
 }
+.app-icon.loaded { opacity: 1; }
 .app-icon:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 26px rgba(2,6,23,0.18); }
 
 .title-wrap { display: flex; flex-direction: column; }
@@ -134,7 +150,6 @@ body {
   background-size: 400% 100%;
   animation: shimmer 1.2s ease-in-out infinite;
 }
-@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
 /* 按钮 */
 .action-row { margin: 22px 0 6px; display: flex; gap: 12px; flex-wrap: wrap; }
@@ -242,6 +257,7 @@ footer {
   body { padding: 16px; }
   .container { padding: 22px; }
   .info-cards { grid-template-columns: 1fr; }
+  .icon-wrap { width: 72px; height: 72px; }
   .app-icon { width: 72px; height: 72px; border-radius: 18px; }
 }
 

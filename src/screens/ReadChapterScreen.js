@@ -1,211 +1,184 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Dimensions, PanResponder, StatusBar,
-  Animated, ActivityIndicator
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadNovelById, getChapterContent, saveChapterContent } from '../storage/storage';
-import SettingsDrawer from '../components/SettingsDrawer';
-import ChapterMenu from '../components/ChapterMenu';
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  PanResponder,
+  StatusBar,
+  Animated,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { loadNovels, getChapterContent, saveChapterContent } from '../storage/storage'
+import SettingsDrawer from '../components/SettingsDrawer'
+import ChapterMenu from '../components/ChapterMenu'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// 简易内存缓存，避免重复读取存储导致的等待
-const contentCache = new Map(); // chapterId -> content
-const getContentCached = async (chapterId) => {
-  if (contentCache.has(chapterId)) return contentCache.get(chapterId);
-  const content = await getChapterContent(chapterId);
-  contentCache.set(chapterId, content || '');
-  return content || '';
-};
-const prefetchContent = (chapterId) => {
-  if (!chapterId || contentCache.has(chapterId)) return;
-  // 低优先级预取，不阻塞主流程
-  getChapterContent(chapterId)
-    .then((c) => {
-      contentCache.set(chapterId, c || '');
-    })
-    .catch(() => {});
-};
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 export default function ReadChapterScreen({ route, navigation }) {
-  const { novelId, volumeId, chapterId } = route.params;
+  const { novelId, volumeId, chapterId } = route.params
 
-  const [novel, setNovel] = useState(null);
-  const [chapterMeta, setChapterMeta] = useState(null);
-  const [chapterContent, setChapterContentState] = useState('');
-  const [fontSize, setFontSize] = useState(16);
-  const [fontFamily, setFontFamily] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [chapterIndex, setChapterIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [showControls, setShowControls] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [novel, setNovel] = useState(null)
+  const [chapter, setChapter] = useState(null)
+  const [chapterContent, setChapterContent] = useState('')
+  const [fontSize, setFontSize] = useState(16)
+  const [fontFamily, setFontFamily] = useState(null)
+  const [darkMode, setDarkMode] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [chapterIndex, setChapterIndex] = useState(0)
+  const [progress, setProgress] = useState(0)
+  const [showControls, setShowControls] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const scrollRef = useRef();
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const hideTimer = useRef(null);
+  const scrollRef = useRef()
+  const fadeAnim = useRef(new Animated.Value(1)).current
+  const hideTimer = useRef(null)
 
+  // 自动隐藏控制栏
   const autoHideControls = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
+    if (hideTimer.current) clearTimeout(hideTimer.current)
     hideTimer.current = setTimeout(() => {
       if (!showSettings && !showMenu) {
-        setShowControls(false);
+        setShowControls(false)
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 300,
           useNativeDriver: true,
-        }).start();
+        }).start()
       }
-    }, 3000);
-  };
+    }, 3000)
+  }
 
+  // 显示控制栏
   const showControlsWithFade = () => {
-    setShowControls(true);
+    setShowControls(true)
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 300,
       useNativeDriver: true,
-    }).start();
-    autoHideControls();
-  };
-
-  // 偏好设置不阻塞正文首屏渲染，独立并行加载
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const entries = await AsyncStorage.multiGet(['fontSize', 'darkMode', 'fontFamily', 'fullscreenMode']);
-        if (cancelled) return;
-        const map = Object.fromEntries(entries);
-        if (map.fontSize) setFontSize(Number(map.fontSize));
-        if (map.darkMode) setDarkMode(map.darkMode === 'true');
-        if (map.fontFamily) setFontFamily(map.fontFamily);
-        if (map.fullscreenMode) setIsFullscreen(map.fullscreenMode === 'true');
-      } catch {}
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    }).start()
+    autoHideControls()
+  }
 
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false
 
-    const run = async () => {
-      try {
-        // 1) 先读取当前小说（仅按ID读取，避免全量）
-        const currentNovel = await loadNovelById(novelId);
-        if (!mounted) return;
-        setNovel(currentNovel || null);
+    const fetch = async () => {
+      const novels = await loadNovels()
+      const novel = novels.find(n => n.id === novelId)
+      const volume = novel?.volumes.find(v => v.id === volumeId)
+      const chapterList = volume?.chapters || []
+      const currentIndex = chapterList.findIndex(c => c.id === chapterId)
+      const ch = chapterList[currentIndex]
 
-        const currentVolume = currentNovel?.volumes?.find(v => v.id === volumeId);
-        const chapterList = currentVolume?.chapters || [];
-        const currentIndex = chapterList.findIndex(c => c.id === chapterId);
-        if (currentIndex !== -1) {
-          const meta = chapterList[currentIndex];
-          setChapterMeta(meta);
-          setChapterIndex(currentIndex);
-
-          // 若旧数据仍将正文保存在对象中，直接用以抢首屏，并异步落盘为文件
-          if (typeof meta?.content === 'string' && meta.content.length > 0) {
-            setChapterContentState(meta.content);
-            // 异步写入文件，避免后续再次从整本小说读取
-            saveChapterContent(chapterId, meta.content).catch(() => {});
-            // 预取相邻章节
-            const prev = chapterList[currentIndex - 1]?.id;
-            const next = chapterList[currentIndex + 1]?.id;
-            prefetchContent(prev);
-            prefetchContent(next);
-          }
-        } else {
-          setChapterMeta(null);
-          setChapterIndex(0);
-        }
-
-        // 2) 并行读取文件正文（或缓存），如果比内嵌正文更新/更全，将覆盖显示
-        getContentCached(chapterId)
-          .then((content) => { if (mounted && typeof content === 'string') setChapterContentState(content); })
-          .catch(() => {});
-      } catch (e) {
-        console.error('加载章节数据失败', e);
+      if (!cancelled) {
+        setNovel(novel)
+        setChapter(ch)
+        setChapterIndex(currentIndex)
+        setChapterContent(typeof ch?.content === 'string' ? ch.content : '')
       }
-    };
 
-    run();
-    autoHideControls();
+      // 设置项读取可以并行，避免阻塞首屏
+      const [savedSize, savedDark, savedFont, savedFullscreen] = await Promise.all([
+        AsyncStorage.getItem('fontSize'),
+        AsyncStorage.getItem('darkMode'),
+        AsyncStorage.getItem('fontFamily'),
+        AsyncStorage.getItem('fullscreenMode'),
+      ])
+
+      if (!cancelled) {
+        if (savedSize) setFontSize(Number(savedSize))
+        if (savedDark) setDarkMode(savedDark === 'true')
+        if (savedFont) setFontFamily(savedFont)
+        if (savedFullscreen) setIsFullscreen(savedFullscreen === 'true')
+      }
+
+      // 正文优先走独立存储（更快/更稳定，避免 novels 体积过大导致解析变慢）
+      try {
+        const text = await getChapterContent(chapterId)
+        if (!cancelled && typeof text === 'string') {
+          setChapterContent(text)
+          // 回填缓存，避免下次仍从大对象读取（兼容旧数据）
+          try { await saveChapterContent(chapterId, text) } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    fetch()
+    autoHideControls()
+
     return () => {
-      mounted = false;
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
-  }, [novelId, volumeId, chapterId]);
+      cancelled = true
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [novelId, volumeId, chapterId])
 
   const updateFontSize = async (size) => {
-    setFontSize(size);
-    await AsyncStorage.setItem('fontSize', size.toString());
-  };
+    setFontSize(size)
+    await AsyncStorage.setItem('fontSize', size.toString())
+  }
 
   const updateFontFamily = async (family) => {
-    setFontFamily(family);
+    setFontFamily(family)
     if (family) {
-      await AsyncStorage.setItem('fontFamily', family);
+      await AsyncStorage.setItem('fontFamily', family)
     } else {
-      await AsyncStorage.removeItem('fontFamily');
+      await AsyncStorage.removeItem('fontFamily')
     }
-  };
+  }
 
   const toggleDarkMode = async () => {
-    const newValue = !darkMode;
-    setDarkMode(newValue);
-    await AsyncStorage.setItem('darkMode', newValue.toString());
-  };
+    const newValue = !darkMode
+    setDarkMode(newValue)
+    await AsyncStorage.setItem('darkMode', newValue.toString())
+  }
 
   const toggleFullscreen = async () => {
-    const newValue = !isFullscreen;
-    setIsFullscreen(newValue);
-    await AsyncStorage.setItem('fullscreenMode', newValue.toString());
-  };
+    const newValue = !isFullscreen
+    setIsFullscreen(newValue)
+    await AsyncStorage.setItem('fullscreenMode', newValue.toString())
+  }
 
   const handleSelectChapter = (volumeId, chapterId) => {
-    setShowMenu(false);
-    // 预取所选章节
-    prefetchContent(chapterId);
-    navigation.replace('ReadChapter', { novelId, volumeId, chapterId });
-  };
+    setShowMenu(false)
+    navigation.replace('ReadChapter', { novelId, volumeId, chapterId })
+  }
 
   const goToChapter = (indexOffset) => {
-    const volume = novel?.volumes?.find(v => v.id === volumeId);
-    const chapterList = volume?.chapters || [];
-    const newIndex = chapterIndex + indexOffset;
+    const volume = novel?.volumes.find(v => v.id === volumeId)
+    const chapterList = volume?.chapters || []
+    const newIndex = chapterIndex + indexOffset
     if (newIndex >= 0 && newIndex < chapterList.length) {
-      const newChapter = chapterList[newIndex];
-      // 导航前触发预取，进一步降低切换等待
-      prefetchContent(newChapter.id);
-      navigation.replace('ReadChapter', { novelId, volumeId, chapterId: newChapter.id });
+      const newChapter = chapterList[newIndex]
+      navigation.replace('ReadChapter', { novelId, volumeId, chapterId: newChapter.id })
     }
-  };
+  }
 
   const handleTapScreen = () => {
+    console.log('Screen tapped, showControls:', showControls) // 调试日志
     if (showControls) {
-      setShowControls(false);
+      // 隐藏控制栏
+      setShowControls(false)
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
-      }).start();
-      if (hideTimer.current) clearTimeout(hideTimer.current);
+      }).start()
+      // 清除自动隐藏定时器
+      if (hideTimer.current) clearTimeout(hideTimer.current)
     } else {
-      showControlsWithFade();
+      // 显示控制栏
+      showControlsWithFade()
     }
-  };
+  }
 
   useEffect(() => {
-    const headerBackground = darkMode ? '#1a1a1a' : '#fffafc';
-    const headerTint = darkMode ? '#f5f5f5' : '#8e8ee0';
+    const headerBackground = darkMode ? '#1a1a1a' : '#fffafc'
+    const headerTint = darkMode ? '#f5f5f5' : '#8e8ee0'
 
     navigation.setOptions({
       headerStyle: {
@@ -220,36 +193,46 @@ export default function ReadChapterScreen({ route, navigation }) {
         fontFamily: 'Song',
         color: headerTint,
       },
-    });
-  }, [navigation, darkMode]);
+    })
+  }, [navigation, darkMode])
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gesture) => {
-        return Math.abs(gesture.dx) > 20 && Math.abs(gesture.dx) > Math.abs(gesture.dy);
+        // 只有水平滑动距离大于20才处理翻页
+        return Math.abs(gesture.dx) > 20 && Math.abs(gesture.dx) > Math.abs(gesture.dy)
       },
-      onPanResponderGrant: () => {},
+      onPanResponderGrant: () => {
+        // 记录触摸开始，用于判断是否为点击
+      },
       onPanResponderRelease: (_, gesture) => {
-        const isClick = Math.abs(gesture.dx) < 5 && Math.abs(gesture.dy) < 5;
+        // 判断是否为点击（移动距离很小）
+        const isClick = Math.abs(gesture.dx) < 5 && Math.abs(gesture.dy) < 5
+        
         if (isClick) {
-          handleTapScreen();
-          return;
+          // 点击屏幕切换控制栏
+          handleTapScreen()
+          return
         }
+        
+        // 左右滑动翻页
         if (Math.abs(gesture.dx) > 50 && Math.abs(gesture.dx) > Math.abs(gesture.dy)) {
           if (gesture.dx < -50) {
-            goToChapter(1);
+            goToChapter(1) // 左滑下一章
           } else if (gesture.dx > 50) {
-            goToChapter(-1);
+            goToChapter(-1) // 右滑上一章
           }
         }
       }
     })
-  ).current;
+  ).current
 
-  const currentChapterList = novel?.volumes?.find(v => v.id === volumeId)?.chapters || [];
-  const isFirstChapter = currentChapterList.length > 0 ? chapterIndex === 0 : true;
-  const isLastChapter = currentChapterList.length > 0 ? chapterIndex === currentChapterList.length - 1 : true;
+  if (!chapter) return null
+
+  const currentChapterList = novel?.volumes.find(v => v.id === volumeId)?.chapters || []
+  const isFirstChapter = chapterIndex === 0
+  const isLastChapter = chapterIndex === currentChapterList.length - 1
 
   const theme = {
     backgroundColor: darkMode ? '#1a1a1a' : '#fffafc',
@@ -263,10 +246,10 @@ export default function ReadChapterScreen({ route, navigation }) {
     buttonBorder: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
     progressBg: darkMode ? '#333333' : '#fde2e4',
     progressFill: darkMode ? '#4C9EEB' : '#ffc2d1',
-  };
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <StatusBar 
         barStyle={darkMode ? 'light-content' : 'dark-content'} 
         backgroundColor={theme.backgroundColor}
@@ -274,6 +257,7 @@ export default function ReadChapterScreen({ route, navigation }) {
       />
       
       <View style={styles.readerContainer} {...panResponder.panHandlers}>
+        {/* 顶部控制栏 */}
         <Animated.View 
           style={[
             styles.topControls, 
@@ -314,17 +298,18 @@ export default function ReadChapterScreen({ route, navigation }) {
           </View>
         </Animated.View>
 
+        {/* 阅读区域 */}
         <ScrollView
           ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           onScroll={(e) => {
-            const contentHeight = e.nativeEvent.contentSize.height;
-            const visibleHeight = e.nativeEvent.layoutMeasurement.height;
-            const offsetY = e.nativeEvent.contentOffset.y;
-            const totalScrollable = contentHeight - visibleHeight;
-            const percent = totalScrollable > 0 ? Math.min(Math.max(offsetY / totalScrollable, 0), 1) : 0;
-            setProgress(percent);
+            const contentHeight = e.nativeEvent.contentSize.height
+            const visibleHeight = e.nativeEvent.layoutMeasurement.height
+            const offsetY = e.nativeEvent.contentOffset.y
+            const totalScrollable = contentHeight - visibleHeight
+            const percent = totalScrollable > 0 ? Math.min(Math.max(offsetY / totalScrollable, 0), 1) : 0
+            setProgress(percent)
           }}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
@@ -339,49 +324,43 @@ export default function ReadChapterScreen({ route, navigation }) {
               color: theme.titleColor,
               fontFamily: fontFamily || 'Song',
               marginTop: showControls ? 0 : 20
-            }]}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              {chapterMeta?.title || '加载中...'}
+            }]}>
+              {chapter.title}
             </Text>
             
             <View style={styles.chapterInfo}>
               <Text style={[styles.chapterMeta, { color: theme.textColor }]}>
-                第 {currentChapterList.length > 0 ? (chapterIndex + 1) : '-'} 章 / 共 {currentChapterList.length || '-'} 章
+                第 {chapterIndex + 1} 章 / 共 {currentChapterList.length} 章
               </Text>
               <Text style={[styles.chapterMeta, { color: theme.textColor }]}>
                 字数: {chapterContent?.length || 0}
               </Text>
             </View>
             
-            {chapterContent ? (
-              <Text style={[styles.content, { 
-                fontSize, 
-                color: theme.textColor,
-                lineHeight: fontSize * 1.6,
-                fontFamily: fontFamily || undefined,
-                fontWeight: darkMode ? '300' : '400'
-              }]}
-              >
-                {chapterContent}
-              </Text>
-            ) : (
-              <View style={{ minHeight: 120, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="small" color={theme.textColor} />
-                <Text style={{ marginTop: 8, color: theme.textColor, opacity: 0.7 }}>加载正文...</Text>
-              </View>
-            )}
+            <Text style={[styles.content, { 
+              fontSize, 
+              color: theme.textColor,
+              lineHeight: fontSize * 1.6,
+              fontFamily: fontFamily || undefined,
+              fontWeight: darkMode ? '300' : '400'
+            }]}>
+              {chapterContent}
+            </Text>
             
+            {/* 章节结束提示 */}
             <View style={styles.chapterEnd}>
-              <Text style={[styles.endText, { color: theme.textColor }]}>—— 本章完 ——</Text>
+              <Text style={[styles.endText, { color: theme.textColor }]}>
+                —— 本章完 ——
+              </Text>
               <View style={styles.endNavigation}>
                 {!isFirstChapter && (
                   <TouchableOpacity 
                     style={[styles.endButton, { backgroundColor: theme.buttonBg }]}
                     onPress={() => goToChapter(-1)}
                   >
-                    <Text style={[styles.endButtonText, { color: theme.buttonText }]}>← 上一章</Text>
+                    <Text style={[styles.endButtonText, { color: theme.buttonText }]}>
+                      ← 上一章
+                    </Text>
                   </TouchableOpacity>
                 )}
                 {!isLastChapter && (
@@ -389,7 +368,9 @@ export default function ReadChapterScreen({ route, navigation }) {
                     style={[styles.endButton, { backgroundColor: theme.buttonBg }]}
                     onPress={() => goToChapter(1)}
                   >
-                    <Text style={[styles.endButtonText, { color: theme.buttonText }]}>下一章 →</Text>
+                    <Text style={[styles.endButtonText, { color: theme.buttonText }]}>
+                      下一章 →
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -397,9 +378,8 @@ export default function ReadChapterScreen({ route, navigation }) {
           </TouchableOpacity>
         </ScrollView>
 
-        <View style={[styles.progressBarContainer, { backgroundColor: theme.progressBg }]}
-          pointerEvents="none"
-        >
+        {/* 阅读进度条 */}
+        <View style={[styles.progressBarContainer, { backgroundColor: theme.progressBg }]}>
           <View style={[
             styles.progressBarFill, 
             { 
@@ -414,6 +394,7 @@ export default function ReadChapterScreen({ route, navigation }) {
           </Text>
         </View>
 
+        {/* 底部控制栏 */}
         <Animated.View 
           style={[
             styles.bottomBar, 
@@ -434,15 +415,14 @@ export default function ReadChapterScreen({ route, navigation }) {
             <Text style={[
               styles.navText, 
               { color: isFirstChapter ? '#999' : theme.progressFill }
-            ]}
-            >
+            ]}>
               ← 上一章
             </Text>
           </TouchableOpacity>
           
           <View style={styles.centerInfo}>
             <Text style={[styles.progressText, { color: theme.controlText }]}>
-              {currentChapterList.length > 0 ? (chapterIndex + 1) : '-'} / {currentChapterList.length || '-'}
+              {chapterIndex + 1} / {currentChapterList.length}
             </Text>
             <Text style={[styles.progressDetail, { color: theme.controlText }]}>
               {Math.round(progress * 100)}%
@@ -457,14 +437,14 @@ export default function ReadChapterScreen({ route, navigation }) {
             <Text style={[
               styles.navText, 
               { color: isLastChapter ? '#999' : theme.progressFill }
-            ]}
-            >
+            ]}>
               下一章 →
             </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
 
+      {/* 设置抽屉弹窗 */}
       {showSettings && (
         <SettingsDrawer
           fontSize={fontSize}
@@ -476,12 +456,13 @@ export default function ReadChapterScreen({ route, navigation }) {
           onDarkModeToggle={toggleDarkMode}
           onFullscreenToggle={toggleFullscreen}
           onClose={() => {
-            setShowSettings(false);
-            autoHideControls();
+            setShowSettings(false)
+            autoHideControls()
           }}
         />
       )}
 
+      {/* 目录弹窗 */}
       {showMenu && (
         <ChapterMenu
           novel={novel}
@@ -489,13 +470,13 @@ export default function ReadChapterScreen({ route, navigation }) {
           darkMode={darkMode}
           onSelect={handleSelectChapter}
           onClose={() => {
-            setShowMenu(false);
-            autoHideControls();
+            setShowMenu(false)
+            autoHideControls()
           }}
         />
       )}
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -528,6 +509,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     marginLeft: 8,
+    // 移除阴影效果，避免日间模式下的视觉残留
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
   },
@@ -544,7 +526,7 @@ const styles = StyleSheet.create({
   },
   contentTouchable: {
     flex: 1,
-    minHeight: SCREEN_HEIGHT - 200,
+    minHeight: SCREEN_HEIGHT - 200, // 确保内容区域足够大，可以接收点击
   },
   title: {
     marginBottom: 16,
@@ -656,4 +638,4 @@ const styles = StyleSheet.create({
   hidden: {
     pointerEvents: 'none',
   },
-});
+})

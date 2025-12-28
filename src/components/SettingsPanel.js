@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   Dimensions,
+  Switch,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import * as ImagePicker from 'expo-image-picker';
@@ -239,29 +240,50 @@ const getStyles = (theme) => StyleSheet.create({
 });
 
 const SegmentedControl = ({ label, options, selectedValue, onValueChange, styles }) => (
-    <View style={styles.settingBlock}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.segmentedControlContainer}>
-        {options.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.segmentedControlButton,
-              selectedValue === option.value && styles.segmentedControlButtonActive,
-            ]}
-            onPress={() => onValueChange(option.value)}
-          >
-            <Text style={[
-              styles.segmentedControlButtonText,
-              selectedValue === option.value && styles.segmentedControlButtonTextActive,
-            ]}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+  <View style={styles.settingBlock}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.segmentedControlContainer}>
+      {options.map(option => (
+        <TouchableOpacity
+          key={option.value}
+          style={[
+            styles.segmentedControlButton,
+            selectedValue === option.value && styles.segmentedControlButtonActive,
+          ]}
+          onPress={() => onValueChange(option.value)}
+        >
+          <Text style={[
+            styles.segmentedControlButtonText,
+            selectedValue === option.value && styles.segmentedControlButtonTextActive,
+          ]}>
+            {option.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
-  );
+  </View>
+);
+
+const DEFAULT_PUNCT_TOKEN_IDS = [201, 223, 271, 303, 320, 410, 428, 430, 442, 768, 811, 965, 1148, 1175, 1227, 1237, 1248, 1847, 2096, 2136, 3505, 4945, 5309, 5532, 8496, 10695, 10970, 13399, 21016, 33803, 71984];
+
+const defaultSettings = {
+  modelProvider: 'DeepSeek',
+  apiBaseUrl: 'https://api.deepseek.com/chat/completions',
+  model: 'deepseek-chat',
+  temperature: 1.0,
+  presence_penalty: 0.0,
+  frequency_penalty: 0.0,
+  max_tokens: 6000,
+  usePunctuationBias: false,
+  punctuationBiasTokenIds: DEFAULT_PUNCT_TOKEN_IDS,
+  bubbleWidth: '90%',
+  description: '',
+  systemPrompt: '',
+  backgroundImage: '',
+  apiKey: '',
+  debugLLM: false,
+  debugLogitBiasProbe: false
+};
 
 const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
   const { theme } = useTheme();
@@ -274,15 +296,40 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
   useEffect(() => {
     if (isVisible && session) {
       setTitle(session.title || '');
-      setSettings(session.settings ? JSON.parse(JSON.stringify(session.settings)) : {});
+      const currentSettings = session.settings ? JSON.parse(JSON.stringify(session.settings)) : {};
+      setSettings({ ...defaultSettings, ...currentSettings });
     } else if (!isVisible) {
       setTitle('');
       setSettings({});
     }
   }, [session, isVisible]);
 
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleSave = () => {
-    onSave(title, settings);
+    // 保存前做一次 tokenId 校验/清洗
+    let nextSettings = { ...settings };
+    if (typeof nextSettings.punctuationBiasTokenIds === 'string') {
+      const raw = nextSettings.punctuationBiasTokenIds.trim();
+      try {
+        let arr;
+        if (raw.startsWith('[')) {
+          arr = JSON.parse(raw);
+        } else if (raw.length === 0) {
+          arr = [];
+        } else {
+          arr = raw.split(/[\s,，]+/).filter(Boolean).map(x => parseInt(x, 10));
+        }
+        if (!Array.isArray(arr)) throw new Error('not array');
+        nextSettings.punctuationBiasTokenIds = Array.from(new Set(arr.map(n => Number(n)).filter(n => Number.isFinite(n) && n >= 0))).sort((a,b)=>a-b);
+      } catch (e) {
+        nextSettings.punctuationBiasTokenIds = [];
+      }
+    }
+
+    onSave(title, nextSettings);
     onClose();
   };
 
@@ -301,10 +348,6 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
     });
   };
 
-  const updateSetting = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  };
-
   const handleChooseImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -321,7 +364,7 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
 
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
       updateSetting('backgroundImage', pickerResult.assets[0].uri);
-    } else if (!pickerResult.cancelled && pickerResult.uri) {
+    } else if (!pickerResult.canceled && pickerResult.uri) {
       updateSetting('backgroundImage', pickerResult.uri);
     }
   };
@@ -343,7 +386,7 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
       onRequestClose={onClose}
     >
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}
           behavior="padding"
         >
@@ -363,6 +406,10 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
                 <TouchableOpacity onPress={() => setActiveTab('模型')} style={styles.tab}>
                   <Text style={[styles.tabText, activeTab === '模型' && styles.activeTabText]}>模型</Text>
                   {activeTab === '模型' && <View style={styles.activeTabIndicator} />}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setActiveTab('参数')} style={styles.tab}>
+                  <Text style={[styles.tabText, activeTab === '参数' && styles.activeTabText]}>参数</Text>
+                  {activeTab === '参数' && <View style={styles.activeTabIndicator} />}
                 </TouchableOpacity>
               </View>
 
@@ -412,7 +459,6 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
                       multiline
                     />
                   </View>
-                  
                 </>
               )}
 
@@ -450,7 +496,7 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
                       style={styles.input}
                       value={settings.modelProvider || ''}
                       onChangeText={v => updateSetting('modelProvider', v)}
-                      placeholder="例如: SILICONFLOW API"
+                      placeholder="DeepSeek"
                       placeholderTextColor={theme.placeholderText}
                     />
                   </View>
@@ -478,22 +524,26 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
                       style={styles.input}
                       value={settings.apiBaseUrl || ''}
                       onChangeText={v => updateSetting('apiBaseUrl', v)}
-                      placeholder="例如: https://api.siliconflow.cn/v1/chat/completions"
+                      placeholder="https://api.deepseek.com/chat/completions"
                       placeholderTextColor={theme.placeholderText}
                     />
                   </View>
 
                   <View style={styles.settingBlock}>
-                    <Text style={styles.label}>模型名称</Text>
+                    <Text style={styles.label}>模型名称 (Model)</Text>
                     <TextInput
                       style={styles.input}
                       value={settings.model || ''}
                       onChangeText={v => updateSetting('model', v)}
-                      placeholder="例如: deepseek-ai/DeepSeek-V3"
+                      placeholder="deepseek-chat"
                       placeholderTextColor={theme.placeholderText}
                     />
                   </View>
+                </>
+              )}
 
+              {activeTab === '参数' && (
+                <>
                   <View style={styles.settingBlock}>
                     <Text style={styles.label}>严谨与想象 (Temperature)</Text>
                     <View style={styles.sliderContainer}>
@@ -501,21 +551,172 @@ const SettingsPanel = ({ isVisible, onClose, onSave, session, navigation }) => {
                         style={styles.slider}
                         minimumValue={0}
                         maximumValue={2}
-                        step={0.1}
-                        value={settings.temperature ?? 0.7}
+                        step={0.05}
+                        value={settings.temperature ?? 1.0}
                         onValueChange={v => updateSetting('temperature', v)}
                         minimumTrackTintColor={theme.actionText}
                         maximumTrackTintColor={theme.borderColor}
                         thumbTintColor={theme.actionText}
                       />
                       <View style={styles.sliderValueContainer}>
-                        <Text style={styles.sliderValueText}>{(settings.temperature ?? 0.7).toFixed(1)}</Text>
+                        <Text style={styles.sliderValueText}>{(settings.temperature ?? 1.0).toFixed(2)}</Text>
                       </View>
                     </View>
                   </View>
+
+                  <View style={styles.settingBlock}>
+                    <Text style={styles.label}>存在惩罚 (Presence Penalty)</Text>
+                    <View style={styles.sliderContainer}>
+                      <Slider
+                        style={styles.slider}
+                        minimumValue={-2}
+                        maximumValue={2}
+                        step={0.05}
+                        value={settings.presence_penalty ?? 0.0}
+                        onValueChange={v => updateSetting('presence_penalty', v)}
+                        minimumTrackTintColor={theme.actionText}
+                        maximumTrackTintColor={theme.borderColor}
+                        thumbTintColor={theme.actionText}
+                      />
+                      <View style={styles.sliderValueContainer}>
+                        <Text style={styles.sliderValueText}>{(settings.presence_penalty ?? 0.0).toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.settingBlock}>
+                    <Text style={styles.label}>频率惩罚 (Frequency Penalty)</Text>
+                    <View style={styles.sliderContainer}>
+                      <Slider
+                        style={styles.slider}
+                        minimumValue={-2}
+                        maximumValue={2}
+                        step={0.05}
+                        value={settings.frequency_penalty ?? 0.0}
+                        onValueChange={v => updateSetting('frequency_penalty', v)}
+                        minimumTrackTintColor={theme.actionText}
+                        maximumTrackTintColor={theme.borderColor}
+                        thumbTintColor={theme.actionText}
+                      />
+                      <View style={styles.sliderValueContainer}>
+                        <Text style={styles.sliderValueText}>{(settings.frequency_penalty ?? 0.0).toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.settingBlock}>
+                    <Text style={styles.label}>最大生成长度 (Max Tokens)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={String(settings.max_tokens ?? 6000)}
+                      onChangeText={v => {
+                        const num = parseInt(v.replace(/[^0-9]/g, ''), 10);
+                        if (!isNaN(num)) {
+                          updateSetting('max_tokens', num);
+                        } else {
+                          updateSetting('max_tokens', 0);
+                        }
+                      }}
+                      onBlur={() => {
+                        const currentValue = settings.max_tokens ?? 6000;
+                        if (currentValue < 50) {
+                          updateSetting('max_tokens', 50);
+                        } else if (currentValue > 10000) {
+                          updateSetting('max_tokens', 10000);
+                        }
+                      }}
+                      placeholder="50 - 10000"
+                      placeholderTextColor={theme.placeholderText}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={styles.settingBlock}>
+                    <View style={styles.labelContainer}>
+                      <Text style={styles.label}>标点保护 (Punctuation Bias)</Text>
+                      <Switch
+                        value={!!settings.usePunctuationBias}
+                        onValueChange={v => updateSetting('usePunctuationBias', v)}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.settingBlock}>
+                    <View style={styles.labelContainer}>
+                      <Text style={styles.label}>标点 TokenIds (用于 logit_bias)</Text>
+                      <TouchableOpacity onPress={() => updateSetting('punctuationBiasTokenIds', DEFAULT_PUNCT_TOKEN_IDS)}>
+                        <Text style={styles.fullScreenButtonText}>一键填入</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <TextInput
+                      style={[styles.input, styles.textArea, { height: 80 }]}
+                      value={Array.isArray(settings.punctuationBiasTokenIds)
+                        ? JSON.stringify(settings.punctuationBiasTokenIds)
+                        : (settings.punctuationBiasTokenIds ? String(settings.punctuationBiasTokenIds) : '[]')}
+                      onChangeText={(v) => {
+                        const raw = (v || '').trim();
+                        try {
+                          let arr;
+                          if (raw.startsWith('[')) {
+                            arr = JSON.parse(raw);
+                          } else {
+                            arr = raw.split(/[\s,，]+/).filter(Boolean).map(x => parseInt(x, 10));
+                          }
+                          if (!Array.isArray(arr)) throw new Error('not array');
+                          const cleaned = Array.from(new Set(arr.map(n => Number(n)).filter(n => Number.isFinite(n) && n >= 0))).sort((a,b)=>a-b);
+                          updateSetting('punctuationBiasTokenIds', cleaned);
+                        } catch (e) {
+                          updateSetting('punctuationBiasTokenIds', raw);
+                        }
+                      }}
+                      placeholder='例如：[303,320,410,...] 或 303,320,410,...'
+                      placeholderTextColor={theme.placeholderText}
+                      multiline
+                    />
+                    <Text style={{ color: theme.placeholderText, fontSize: 12, marginTop: 6 }}>
+                      建议：保持与模型对应的 tokenizer 一致。若接口不支持 logit_bias，会自动回退。
+                    </Text>
+                  </View>
+
+                  {__DEV__ && (
+                    <View style={styles.settingBlock}>
+                      <View style={styles.labelContainer}>
+                        <Text style={styles.label}>调试日志 (debugLLM)</Text>
+                        <Switch
+                          value={!!settings.debugLLM}
+                          onValueChange={v => updateSetting('debugLLM', v)}
+                        />
+                      </View>
+                      <Text style={{ color: theme.placeholderText, fontSize: 12, marginTop: 6 }}>
+                        开启后会在控制台打印 LLM 请求关键字段（temperature/presence/frequency/max_tokens、messages 数量、是否带 logit_bias），用于排查“调参无效”。
+                      </Text>
+                    </View>
+                  )}
+
+                  {__DEV__ && (
+                    <View style={styles.settingBlock}>
+                      <TouchableOpacity
+                        style={[styles.imagePickerButton, { marginBottom: 10 }]}
+                        onPress={() => {
+                          // 触发后，立即保存设置并关闭面板，确保开关状态生效
+                          const nextSettings = { ...settings, debugLogitBiasProbe: true };
+                          onSave(title, nextSettings);
+                          onClose();
+                          // 延迟 alert，避免在面板关闭动画期间卡顿
+                          setTimeout(() => {
+                            alert('已触发 logit_bias 对照测试：下一次发起请求时将自动进行两次短请求对照，并在终端输出统计。');
+                          }, 500);
+                        }}
+                      >
+                        <Text style={styles.imagePickerButtonText}>logit_bias 对照测试</Text>
+                      </TouchableOpacity>
+                      <Text style={{ color: theme.placeholderText, fontSize: 12, marginTop: 0 }}>
+                        说明：会自动做两次“短输出”请求（一次带 logit_bias，一次不带），只在终端打印标点统计，不会打印 systemPrompt 或消息内容。
+                      </Text>
+                    </View>
+                  )}
                 </>
               )}
-
             </ScrollView>
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>

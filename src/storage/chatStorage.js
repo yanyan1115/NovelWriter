@@ -24,11 +24,16 @@ export const defaultGlobalSettings = {
 // --- Default Settings ---
 const defaultSettings = {
   systemPrompt: '你是一个得力的AI助手。',
-  modelProvider: 'SiliconFlow',
+  modelProvider: 'DeepSeek',
   apiKey: '',
-  apiBaseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
-  model: 'deepseek-ai/DeepSeek-V3',
-  temperature: 0.7,
+  apiBaseUrl: 'https://api.deepseek.com/chat/completions',
+  model: 'deepseek-chat',
+  temperature: 1.0,
+  presence_penalty: 0.0,
+  frequency_penalty: 0.0,
+  max_tokens: 6000,
+  usePunctuationBias: false, // 默认关闭标点偏置
+  punctuationBiasTokenIds: [201, 223, 271, 303, 320, 410, 428, 430, 442, 768, 811, 965, 1148, 1175, 1227, 1237, 1248, 1847, 2096, 2136, 3505, 4945, 5309, 5532, 8496, 10695, 10970, 13399, 21016, 33803, 71984], // 标点 tokenId 变体集合（空格/换行前缀 + 标点；deepseek-tokenizer 0.1.3 生成）
   description: '',
   backgroundImage: '',
 };
@@ -186,8 +191,11 @@ export const createNewSession = async () => {
         ],
         currentVersionIndex: 0,
         isCollapsed: false,
+        deletedAt: null,
+        deletedByUndoId: null,
       },
     ],
+    pendingUndo: null,
   };
 
   // 1. Save the full session object

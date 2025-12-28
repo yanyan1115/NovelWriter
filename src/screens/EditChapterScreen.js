@@ -60,25 +60,43 @@ export default function EditChapter({ route, navigation }) {
   const viewportTopYRef = useRef(0) // ScrollView 可视区域在屏幕上的绝对 top
 
   useEffect(() => {
+    let cancelled = false
+
     const loadChapter = async () => {
       if (!chapterId) return
+
+      // 先从轻量的正文缓存读取，保证首屏更快
+      try {
+        const text = await getChapterContent(chapterId)
+        if (!cancelled && typeof text === 'string') setContent(text)
+      } catch (_) {}
+
+      // 再读取 meta（title 等）。旧版本可能把 content 也塞在 novels 里，这里只做兜底 & 迁移
       const novels = await loadNovels()
       const novel = novels.find(n => n.id === novelId)
       const volume = novel?.volumes.find(v => v.id === volumeId)
       const chapter = volume?.chapters.find(c => c.id === chapterId)
-      if (chapter) {
-        setTitle(chapter.title ?? '')
-        if (typeof chapter.content === 'string' && chapter.content.length > 0) {
-          setContent(chapter.content)
-          try { await saveChapterContent(chapterId, chapter.content) } catch (_) {}
-        }
-        try {
-          const text = await getChapterContent(chapterId)
-          if (typeof text === 'string') setContent(text)
-        } catch (_) {}
+      if (!chapter) return
+
+      if (!cancelled) setTitle(chapter.title ?? '')
+
+      // 若缓存里没有正文，则用旧字段兜底，并写回缓存
+      // 注意：这里不能用闭包里的 content（它可能是初始值 ''），否则会覆盖 getChapterContent 刚加载到的新正文
+      if (!cancelled) {
+        setContent(prev => {
+          if (prev && prev.length > 0) return prev
+          if (typeof chapter.content === 'string' && chapter.content.length > 0) {
+            try { saveChapterContent(chapterId, chapter.content) } catch (_) {}
+            return chapter.content
+          }
+          return prev
+        })
       }
     }
+
     loadChapter()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterId, novelId, volumeId])
 
   useEffect(() => {
@@ -195,7 +213,7 @@ export default function EditChapter({ route, navigation }) {
     InteractionManager.runAfterInteractions(() => {
       const paddingTop = 80 // Title height + meta height
       const scrollY = scrollYRef.current
-      const availableHeight = viewportH
+      const availableHeight = viewportH - keyboardHeight
       const visibleTop = scrollY
       const visibleBottom = scrollY + availableHeight
 
@@ -211,7 +229,8 @@ export default function EditChapter({ route, navigation }) {
         targetY = caretAbsoluteY - 80
       }
 
-      const maxY = Math.max(0, paddingTop + contentH + (keyboardHeight > 0 ? keyboardHeight : 24) - viewportH)
+      const paddingBottom = keyboardHeight > 0 ? keyboardHeight : 24
+      const maxY = Math.max(0, paddingTop + contentH + paddingBottom - viewportH)
       const finalY = Math.min(Math.max(0, targetY), maxY)
       if (Math.abs(finalY - scrollY) > 1) {
         scrollRef.current?.scrollTo({ y: finalY, animated: true })
@@ -242,13 +261,13 @@ export default function EditChapter({ route, navigation }) {
       autoScrollDirRef.current = 0
     }
 
-    if (!isEditing) {
+    if (!isEditing || keyboardHeight <= 0) {
       stopAutoScroll()
       return
     }
 
-    const threshold = 110 // 边缘触发区域高度
-    const SUSTAIN_MS = 260
+    const threshold = 120 // 边缘触发区域高度（增大一些会更灵敏）
+    const SUSTAIN_MS = 220
     const paddingTop = 80
 
     const scrollTick = () => {
@@ -261,8 +280,9 @@ export default function EditChapter({ route, navigation }) {
       }
 
       const currentScrollY = scrollYRef.current
+      const availableHeight = viewportH - keyboardHeight
       const topEdge = threshold
-      const bottomEdge = viewportH - threshold
+      const bottomEdge = availableHeight - threshold
 
       // 选择触摸坐标优先；若触摸事件不可得（例如拖拽原生选择手柄），回退到插入点屏幕坐标
       const touchFresh = touchingRef.current && (now - lastTouchAtRef.current) < 120
@@ -276,7 +296,8 @@ export default function EditChapter({ route, navigation }) {
         yLocal = caretAbsoluteY - currentScrollY
       }
 
-      const maxY = Math.max(0, paddingTop + contentH + (keyboardHeight > 0 ? keyboardHeight : 24) - viewportH)
+      const paddingBottom = keyboardHeight > 0 ? keyboardHeight : 24
+      const maxY = Math.max(0, paddingTop + contentH + paddingBottom - viewportH)
 
       const prevDir = autoScrollDirRef.current
       let direction = 0
@@ -293,18 +314,18 @@ export default function EditChapter({ route, navigation }) {
       }
 
       if (direction === 0) {
-        // 未触发边缘，保持循环但不滚动
-        autoScrollRafRef.current = requestAnimationFrame(scrollTick)
+        // 未触发边缘：停止循环，等下一次 selection/caret 变化再重新触发（更省电，也避免无意义占用导致卡顿）
+        stopAutoScroll()
         return
       }
 
-      // 边缘距离 -> 速度映射
+      // 边缘距离 -> 速度映射（更平滑、更稳定，避免卡顿）
       const distFromEdge = direction === 1 ? Math.max(0, yLocal - bottomEdge) : Math.max(0, topEdge - yLocal)
       const ratio = Math.min(1, distFromEdge / threshold)
-      const targetSpeed = 3 + Math.pow(ratio, 0.75) * 30 // px/frame
-      if (prevDir !== direction) speedRef.current = 3
-      speedRef.current += (targetSpeed - speedRef.current) * 0.3
-      const speed = Math.max(3, Math.min(30, speedRef.current))
+      const targetSpeed = 2 + ratio * 14 // 2-16 px/frame（更接近 LongTextEdit 的体验）
+      if (prevDir !== direction) speedRef.current = 2
+      speedRef.current += (targetSpeed - speedRef.current) * 0.35
+      const speed = Math.max(2, Math.min(16, speedRef.current))
 
       if (edgeTriggered) sustainUntilRef.current = now + SUSTAIN_MS
 
@@ -344,11 +365,13 @@ export default function EditChapter({ route, navigation }) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={true}
-        removeClippedSubviews={false}
+        removeClippedSubviews={true}
         overScrollMode={Platform.OS === 'android' ? 'never' : 'auto'}
         decelerationRate="normal"
         onLayout={e => { setViewportH(e.nativeEvent.layout.height); requestAnimationFrame(measureViewportTop) }}
-        onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        onScroll={e => {
+          scrollYRef.current = e.nativeEvent.contentOffset.y
+        }}
         scrollEventThrottle={16}
       >
         <TextInput
@@ -364,7 +387,7 @@ export default function EditChapter({ route, navigation }) {
 
         <TextInput
           ref={contentInputRef}
-          placeholder={isEditing ? "请输入正文~(˶╹ꇴ╹˶)~" : (content || "请输入正文~(˶╹ꇴ╹˶)~")}
+          placeholder={isEditing ? "请输入正文..." : (content || "点击开始输入...")}
           value={content}
           onChangeText={setContent}
           multiline
