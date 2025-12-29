@@ -1,124 +1,117 @@
-# NovelWriter App（小说作家应用）
+# 📚 NovelWriter（离线小说创作 + AI 助手）
 
-**NovelWriter App** is a mobile writing application designed for novel authors. It provides a clean, efficient, and powerful creative environment, allowing you to capture inspiration, build worlds, and write stories anytime, anywhere. The project is built with **React Native** and currently supports Android.
+> 🌍 **English README**: [README.en.md](./README.en.md)
 
-**NovelWriter App** 是一款专为小说创作者设计的移动端写作工具。它提供了一个简洁、高效且功能强大的创作环境，让你可以随时随地捕捉灵感、构建世界、撰写故事。项目采用 **React Native** 构建，目前支持 Android 平台。
+NovelWriter 是一款为小说作者打造的个人写作 App：**离线优先、本地存储、结构化管理（卷/章）、沉浸式写作**，并提供 **可选的 AI 助手（通过 API 接入）**，用于灵感/大纲/润色等写作辅助。
 
----
-
-## 📲 Download / 下载应用
-
-You can download a **ready-to-install APK package** from our official website.
-No project cloning or local build is required — simply download and install it on your Android device.
-
-您可以通过我们的官方网站下载 **可直接安装的 APK 安装包**，
-无需克隆项目、无需本地构建，下载后即可在 Android 设备上安装使用。
-
-**[➡️ Visit Download Page / 访问下载页面](https://yanyan1115.github.io/NovelWriter/)**
+- 📱 平台：Android
+- 🧰 技术栈：React Native（Expo）+ EAS Build
+- 🧾 仓库：<https://github.com/yanyan1115/NovelWriter>
 
 ---
 
-## ✨ Core Features / 核心功能
+## ⬇️ 下载与安装（普通用户）
 
-### 📚 Bookshelf & Story Structure Management / 书架与结构管理
+### 🚀 国内用户推荐（稳定下载）
 
-Organize your novels with a clear **Volume / Chapter** hierarchy, making long-form stories easy to manage.
-支持 **卷 / 章** 两级目录结构，帮助你清晰地组织和管理长篇小说内容。
+| 下载渠道 | 链接 | 备注 |
+|---------|------|------|
+| 📥 **123 云盘（推荐）** | [点击下载](https://www.123865.com/s/VwQCvd-5aZd3) | 国内高速下载 |
+| 🌐 **GitHub Pages** | [官网下载页](https://yanyan1115.github.io/NovelWriter/) | 可能需要网络工具 |
+| 🏷️ **GitHub Releases** | [Releases 页面](https://github.com/yanyan1115/NovelWriter/releases) | 可能需要网络工具 |
 
-### ✍️ Immersive Editor / 沉浸式编辑器
-
-A distraction-free writing interface that keeps your focus on storytelling.
-提供无干扰的写作界面，让注意力始终聚焦在文字创作本身。
-
-### 🤖 AI Writing Assistance (Optional) / AI 写作辅助（可选）
-
-Integrated AI assistant features for:
-集成 AI 辅助模块，可用于：
-
-* Sparking creative ideas / 激发创作灵感
-* Generating story outlines / 生成故事大纲
-* Polishing and rewriting text / 辅助润色与改写文本
-
-> AI features are optional and disabled by default. Users must configure their own API key.
-> AI 功能为可选模块，默认关闭，需用户自行配置 API Key。
-
-### 🎨 Customizable Themes / 个性化主题
-
-Built-in light and dark themes with easy switching to suit different writing environments.
-内置日间 / 夜间模式，支持主题切换，适应不同写作环境，减轻视觉疲劳。
-
-### 🔒 Offline-First & Local Data Storage / 离线优先与数据本地化
-
-All content is stored locally on your device, enabling **offline writing** and ensuring data privacy.
-所有创作内容默认保存在本地设备中，支持 **离线写作**，保障数据隐私与安全。
-
-### 🔄 Backup & Restore / 备份与恢复
-
-Reliable backup and restore mechanisms to protect your work from accidental loss.
-提供可靠的备份与恢复机制，防止意外丢失重要创作内容。
+> ⚠️ 注意：
+> - 如果 123 云盘链接失效，请检查 [GitHub Releases](https://github.com/yanyan1115/NovelWriter/releases) 获取最新版本
+> - 安装时若提示"未知来源"，请先开启"允许安装未知来源应用"权限
 
 ---
 
-## 🗂️ Project Structure / 项目结构
+## ✨ 亮点功能
 
-* `src/screens` — Application screens (bookshelf, editor, AI assistant, etc.)  
-  应用页面（书架、编辑器、AI 助手等）
-* `src/components` — Reusable UI components  
-  可复用 UI 组件
-* `src/storage` — Local data persistence and storage logic  
-  本地数据存储与持久化
-* `src/styles` — Global styles and theme management  
-  全局样式与主题管理
-* `src/utils` — Shared utility functions (e.g. AI API wrappers)  
-  通用工具函数（如 AI 接口封装）
+- 📴 **离线优先**：无网络也能写作与管理内容
+- 🔒 **本地存储**：内容默认仅保存在设备本地，保护隐私
+- 🗂️ **卷 / 章结构**：适合长篇小说的目录化管理
+- ✍️ **沉浸式编辑**：减少干扰，专注创作
+- 🎨 **主题切换**：支持浅色 / 深色主题
+- 🧰 **备份与恢复**：备份列表管理、恢复、删除（应用启动时会自动创建备份）
+- 🤖 **AI 助手（可选）**：通过 API Key 接入，按需开启，不强制依赖
 
 ---
 
-## 🛠️ Tech Stack / 技术栈
+## 🤖 AI 助手（可选，OpenAI 兼容接口）
 
-* **Framework / 框架**: React Native
-* **Language / 语言**: JavaScript
-* **State Management / 状态管理**: React Context API
-* **Data Storage / 数据存储**: AsyncStorage (or other local storage solutions)
-* **Navigation / 导航**: React Navigation
+本项目的 AI 对话采用 **OpenAI Chat Completions 兼容接口**（`/chat/completions`），并使用 **SSE 流式输出**（`stream: true`）。
 
----
+你可以在应用内为每个「会话 / 智能体」单独配置：
 
-## 🚀 Getting Started / 快速开始
+- 🔑 `API Key`
+- 🌐 `API Base URL`（示例：`https://api.deepseek.com/chat/completions`）
+- 🧠 `Model`（示例：`deepseek-chat`）
+- 🧾 `System Prompt`（系统提示词）
+- 🧪 采样参数：`temperature` / `presence_penalty` / `frequency_penalty` / `max_tokens`
 
-1. **Clone the repository / 克隆仓库**
+### ⚙️ 在哪里配置？
 
-   ```bash
-   git clone https://github.com/your-username/novel-author-app.git
-   cd novel-author-app
-   ```
+在对话页打开 **「对话设定(Agent)」→「模型」** 即可填写 `API Key / API Base URL / Model`。
 
-2. **Install dependencies / 安装依赖**
+### 🛡️ 隐私提示
 
-   ```bash
-   npm install
-   ```
+当你启用 AI 并发送消息时，**你选择发送的内容会被传输到你填写的 API 服务提供方**；未配置 Key 或不使用 AI 时，不会产生请求。
 
-3. **Run the app / 运行应用**
+### ✳️ 可选：标点保护（logit_bias）
 
-   * Android:
-
-     ```bash
-     npx react-native run-android
-     ```
+应用支持可选的 `logit_bias`（用于提高中文标点输出倾向）。若你所使用的服务端不支持该字段，客户端会自动回退并提示。
 
 ---
 
-## 🤝 Contributing / 贡献
+## 🗄️ 备份与恢复
 
-Issues and Pull Requests are welcome to help improve NovelWriter App.
+- 📦 备份文件为 **`.json`**
+- 📋 支持在备份列表中：**恢复 / 删除**
+- 🕒 应用会在**每次启动时自动创建备份**（见备份页提示）
 
-欢迎提交 **Issues** 或 **Pull Requests**，一起让 NovelWriter App 变得更好。
+> ⚠️ 注意：恢复会覆盖当前书架数据，请谨慎操作。
+
+---
+
+## 🧑‍💻 开发者快速开始（Expo）
+
+1) 安装依赖
+
+```bash
+npm install
+```
+
+2) 本地启动（清缓存）
+
+```bash
+npx expo start -c
+```
+
+3) EAS 打包（Android / preview）
+
+```bash
+eas build -p android --profile preview
+```
+
+---
+
+## 🧭 项目结构
+
+- `src/screens`：页面（书架、编辑器、对话、备份等）
+- `src/components`：通用组件（会话面板、设定面板等）
+- `src/storage`：本地数据存储与持久化
+- `src/styles`：主题与全局样式
+- `src/utils`：工具函数（如 LLM API 客户端封装）
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issues / PR，一起完善更好用的离线写作工具。
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
-
-本项目采用 MIT License。
+MIT

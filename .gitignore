@@ -73,3 +73,5 @@ coverage/
 
 # Application packages
 
+
+*.apk

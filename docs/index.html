@@ -51,20 +51,20 @@
             </section>
 
             <div class="action-row">
-                <a href="https://github.com/yanyan1115/NovelWriter/releases/download/v1.3.2/Cloudrain.apk" class="btn primary download-button" aria-label="前往 GitHub 进行国际下载">
+                <a href="https://github.com/yanyan1115/NovelWriter/releases/download/v1.3.2_1/Cloudrain.apk" class="btn primary download-button" aria-label="前往 GitHub 进行国际下载">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 7h2v6h-2zm0 8h2v2h-2z" fill="currentColor"></path></svg>
                     <span>国际下载 (GitHub)</span>
                 </a>
-                <a href="https://gitee.com/yanyan1115/novel-writer/raw/main/docs/APK/Cloudrain.apk" class="btn secondary download-button" aria-label="国内直链下载 APK">
+                <a href="https://www.123865.com/s/VwQCvd-5aZd3" class="btn secondary download-button" aria-label="国内稳定下载（123 云盘）">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 20h14a1 1 0 0 0 1-1v-3h-2v2H6v-2H4v3a1 1 0 0 0 1 1zm7-3 5-5h-3V4h-4v8H7l5 5z" fill="currentColor"></path></svg>
-                    <span>国内下载 (Gitee)</span>
+                    <span>国内下载 (123云盘)</span>
                 </a>
-                <button class="btn ghost" id="copy-link" data-url="APK/Cloudrain.apk" aria-label="复制国内下载链接">
+                <button class="btn ghost" id="copy-link" data-url="https://www.123865.com/s/VwQCvd-5aZd3" aria-label="复制国内下载链接（123 云盘）">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg>
                     <span>复制下载链接</span>
                 </button>
             </div>
-            <p class="hint">如浏览器未自动下载，请右键“国内下载”选择“链接另存为”。</p>
+            <p class="hint">如未自动开始下载：请点击“国内下载(123云盘)”进入分享页后再点击下载。</p>
 
             <section class="changelog panel">
                 <details class="details" open>
@@ -159,14 +159,16 @@
       }
       const copyBtn = document.getElementById('copy-link');
       copyBtn?.addEventListener('click', async () => {
-        const url = copyBtn.getAttribute('data-url') || '';
+        const url = (copyBtn.getAttribute('data-url') || '').trim();
+        // 兼容：既支持绝对链接，也支持相对路径
+        const finalUrl = /^https?:\/\//i.test(url) ? url : new URL(url, location.href).href;
         try {
-          await navigator.clipboard.writeText(new URL(url, location.href).href);
+          await navigator.clipboard.writeText(finalUrl);
           showToast('已复制下载链接');
         } catch {
           // 旧浏览器降级
           const input = document.createElement('input');
-          input.value = new URL(url, location.href).href;
+          input.value = finalUrl;
           document.body.appendChild(input);
           input.select();
           document.execCommand('copy');
@@ -175,42 +177,12 @@
         }
       });
 
-      // 获取并显示 APK 大小：优先 HEAD，其次 blob
-      const apkUrl = 'APK/Cloudrain.apk';
+      // 文件大小：123 云盘分享链接无法可靠获取 content-length，这里使用固定文案
       const apkSizeEl = document.getElementById('apk-size');
-      function formatSize(bytes) {
-        if (!bytes || isNaN(bytes)) return '未知';
-        const units = ['B','KB','MB','GB'];
-        let size = bytes, idx = 0;
-        while (size >= 1024 && idx < units.length - 1) { size /= 1024; idx++; }
-        return `${size.toFixed(size < 10 && idx > 0 ? 2 : 1)} ${units[idx]}`;
+      if (apkSizeEl) {
+        apkSizeEl.textContent = '约 147 MB';
+        apkSizeEl.classList.remove('skeleton');
       }
-      async function fetchHeadSize(url) {
-        const res = await fetch(url, { method: 'HEAD' });
-        if (!res.ok) throw new Error('HEAD 失败');
-        const len = res.headers.get('content-length');
-        if (!len) throw new Error('无 content-length');
-        return parseInt(len, 10);
-      }
-      (async () => {
-        if (!apkSizeEl) return;
-        try {
-          const bytes = await fetchHeadSize(apkUrl);
-          apkSizeEl.textContent = formatSize(bytes);
-        } catch (e) {
-          try {
-            const res = await fetch(apkUrl);
-            if (!res.ok) throw new Error('GET 失败');
-            const blob = await res.blob();
-            apkSizeEl.textContent = formatSize(blob.size);
-          } catch (err) {
-            console.error('获取 APK 大小出错:', err);
-            apkSizeEl.textContent = '未知';
-          }
-        } finally {
-          apkSizeEl.classList.remove('skeleton');
-        }
-      })();
     });
     </script>
 </body>
